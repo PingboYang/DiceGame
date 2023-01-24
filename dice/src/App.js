@@ -10,6 +10,16 @@ export default function App() {
 
     const [dice, setDice] = React.useState(allNewDice())
     const [tenzies, setTenzies] = React.useState(false)
+    const [count,setCount] = React.useState(0)
+
+    const [stopwatch, setStopwatch] = React.useState(0)
+    const [timer, setTimer] = React.useState(false)
+
+    const [time, setTime] = React.useState({
+        startTime: 0,
+        duration: 0,
+        durations: []
+    })
     
     React.useEffect(() => {
         const allHeld = dice.every(die => die.isHeld)
@@ -19,6 +29,30 @@ export default function App() {
             setTenzies(true)
         }
     }, [dice]) 
+
+    React.useEffect(() => {
+        if (tenzies) {
+            const endTime = Math.floor(Date.now() / 1000)
+            const dur = endTime - time.startTime
+            time.durations.push(dur)
+            setTime(({ ...time, duration: dur }))
+            const bestTime = Math.min(...time.durations)
+            localStorage.setItem("BestTime" + endTime.toString(), bestTime)
+        }
+    }, [tenzies])
+
+    React.useEffect(() => {
+        if (timer) {
+            const timerId = setInterval(() => {
+                setStopwatch(pre => pre + 1)
+            }, 1000)
+            return () => {
+                setTimer(false)
+                clearInterval(timerId)
+            }
+        }
+
+    }, [timer, tenzies])
 
     function generateNewDie() {
         const diceImageArray=images.data.diceImage
@@ -38,12 +72,13 @@ export default function App() {
         
         for (let i = 0; i < 10; i++) {
             newDice.push(generateNewDie())
-            console.log(generateNewDie())
+            
         }
         return newDice
     }
     
     function rollDice() {
+        setCount(count+1)
         if(!tenzies) {
             setDice(oldDice => oldDice.map(die => {
                 return die.isHeld ? 
@@ -53,10 +88,21 @@ export default function App() {
         } else {
             setTenzies(false)
             setDice(allNewDice())
+            setCount(0)
+            setTime(({ ...time, startTime: 0, duration: 0 }))
+            setTimer(false)
+            setStopwatch(0)
         }
     }
     
     function holdDice(id) {
+        const allNotHeld = dice.every(die => !die.isHeld)
+        if (allNotHeld) {
+            time.startTime = Math.floor(Date.now() / 1000)
+            setTime(time)
+            setTimer(true)
+        }
+
         setDice(oldDice => oldDice.map(die => {
             return die.id === id ? 
                 {...die, isHeld: !die.isHeld} :
@@ -87,7 +133,15 @@ export default function App() {
                 onClick={rollDice}
             >
                 {tenzies ? "New Game" : "Roll"}
+                
+                
             </button>
+            <div>
+                <p>Count：{count}</p>
+                <p>duration: {time.duration}</p>
+                <p>stopwatch: {stopwatch}</p>
+               
+            </div>
         </main>
     )
 }
